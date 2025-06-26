@@ -1,6 +1,26 @@
 import os
+import sys
 import subprocess
 from google.genai import types
+import subprocess
+
+def run_python_file(file_path, args=None, working_directory=None, timeout=30):
+    # Add path validation
+    from utils.path_validation import validate_path
+    file_path = validate_path(file_path, working_directory)
+    
+    # Add timeout
+    try:
+        result = subprocess.run(
+            [sys.executable, file_path] + (args or []),
+            capture_output=True,
+            text=True,
+            cwd=working_directory,
+            timeout=timeout
+        )
+        return result.stdout
+    except subprocess.TimeoutExpired:
+        return "Error: Execution timed out"
 
 
 def run_python_file(working_directory, file_path, args=None):
