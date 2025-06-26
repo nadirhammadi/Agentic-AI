@@ -79,7 +79,3 @@ Contributing
 
 Contributions welcome!  
 Please open an issue or a PR for any improvements.
-
-License
-
-Open-source MIT license project.
