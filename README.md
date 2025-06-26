@@ -1,5 +1,5 @@
 # Agentic-AI
-AI Code Assistant
+AI Code Assistant 
 
 A local AI assistant using Google Gemini to help analyze, modify, and test your Python codebase.
 
