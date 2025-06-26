@@ -1,0 +1,29 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnement virtuel
+venv/
+ENV/
+env/
+
+# Fichiers de logs
+*.log
+
+# Fichiers temporaires
+*.swp
+*.tmp
+
+# Fichiers de configuration locaux
+.env
+
+# Dossiers de tests ou outputs générés
+tests/__pycache__/
+calculator/tests/__pycache__/
+
+# Visual Studio Code settings
+.vscode/
+
+# MacOS files
+.DS_Store
