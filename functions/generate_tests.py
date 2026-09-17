@@ -1,17 +1,18 @@
 import os
+import sys
 import logging
 import subprocess
 from datetime import datetime
 from google import genai
 from google.genai import types
-from config import WORKING_DIR
+from config import WORKING_DIR, TEST_GEN_MODEL
 from utils.path_validation import validate_path
 
 logger = logging.getLogger(__name__)
 
-def generate_tests(file_path: str, 
+def generate_tests(file_path: str,
                    working_directory: str = WORKING_DIR,
-                   model: str = "gemini-1.5-flash-latest",
+                   model: str = TEST_GEN_MODEL,
                    timeout: int = 60) -> str:
     """
     Generates unit tests for a Python file and runs them
@@ -120,7 +121,7 @@ def run_tests(test_path: str, timeout: int = 60) -> str:
     """Execute pytest with timeout handling"""
     try:
         result = subprocess.run(
-            ["pytest", test_path],
+            [sys.executable, "-m", "pytest", test_path],
             capture_output=True,
             text=True,
             timeout=timeout
