@@ -10,7 +10,7 @@ from google import genai
 from google.genai import types
 from functions.generate_tests import generate_tests 
 from call_function import call_function, available_functions
-from config import MAX_ITERS
+from config import MAX_ITERS, DEFAULT_MODEL
 from prompts import system_prompt
 
 # Configure logging
@@ -28,7 +28,7 @@ def main():
     parser = argparse.ArgumentParser(description="AI Code Assistant")
     parser.add_argument("prompt", nargs="+", help="User prompt for the AI")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("--model", default="gemini-2.0-flash-001", help="Gemini model to use")
+    parser.add_argument("--model", default=DEFAULT_MODEL, help="Gemini model to use")
     parser.add_argument("--dry-run", action="store_true", help="Prevent file modifications and execution")
     parser.add_argument("--testgen", action="store_true", help="Generate tests for a specific file")
     args = parser.parse_args()
@@ -86,11 +86,13 @@ def main():
             # Add to conversation history
             conversation_history.append({
                 "iteration": iters,
-                "messages": [msg.to_dict() for msg in messages],
+                "messages": [
+                    msg.model_dump(mode="json", exclude_none=True) for msg in messages
+                ],
                 "response": response.text if response else None
             })
-            
-            if final_response:
+
+            if final_response is not None:
                 logger.info("Final response:")
                 print(final_response)
                 break
@@ -100,7 +102,9 @@ def main():
             conversation_history.append({
                 "iteration": iters,
                 "error": str(e),
-                "messages": [msg.to_dict() for msg in messages]
+                "messages": [
+                    msg.model_dump(mode="json", exclude_none=True) for msg in messages
+                ]
             })
             break
 
@@ -123,7 +127,6 @@ def main():
 
 def generate_content(client, messages, model, verbose, dry_run=False):
     try:
-        # Generate content with retry mechanism
         response = client.models.generate_content(
             model=model,
             contents=messages,
@@ -131,7 +134,6 @@ def generate_content(client, messages, model, verbose, dry_run=False):
                 tools=[available_functions],
                 system_instruction=system_prompt
             ),
-            retry=genai.types.RetryStrategy(max_retries=3)
         )
 
         # Monitor token usage
@@ -174,13 +176,10 @@ def generate_content(client, messages, model, verbose, dry_run=False):
         if not function_responses:
             raise Exception("No function responses generated")
 
-        # Add tool responses to conversation
-        messages.append(types.Content(role="tool", parts=function_responses))
+        # Add tool responses to conversation (Gemini requires role "user" or "model")
+        messages.append(types.Content(role="user", parts=function_responses))
         return None, response
 
-    except genai.types.GenerationError as e:
-        logger.error(f"API generation error: {str(e)}")
-        raise
     except Exception as e:
         logger.error(f"Unexpected error in content generation: {str(e)}")
         if verbose:

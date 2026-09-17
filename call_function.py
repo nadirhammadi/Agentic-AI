@@ -15,40 +15,52 @@ available_functions = types.Tool(
     ]
 )
 
+FUNCTION_MAP = {
+    "get_files_info": get_files_info,
+    "get_file_content": get_file_content,
+    "run_python_file": run_python_file,
+    "write_file": write_file,
+}
 
-def call_function(function_call_part, verbose=False):
-    if verbose:
-        print(
-            f" - Calling function: {function_call_part.name}({function_call_part.args})"
-        )
-    else:
-        print(f" - Calling function: {function_call_part.name}")
-    function_map = {
-        "get_files_info": get_files_info,
-        "get_file_content": get_file_content,
-        "run_python_file": run_python_file,
-        "write_file": write_file,
-    }
-    function_name = function_call_part.name
-    if function_name not in function_map:
-        return types.Content(
-            role="tool",
-            parts=[
-                types.Part.from_function_response(
-                    name=function_name,
-                    response={"error": f"Unknown function: {function_name}"},
-                )
-            ],
-        )
-    args = dict(function_call_part.args)
-    args["working_directory"] = WORKING_DIR
-    function_result = function_map[function_name](**args)
+# Functions that mutate the filesystem or execute code; skipped in dry-run mode.
+SIDE_EFFECT_FUNCTIONS = {"run_python_file", "write_file"}
+
+
+def _function_response(function_name, response):
     return types.Content(
-        role="tool",
+        role="user",
         parts=[
             types.Part.from_function_response(
                 name=function_name,
-                response={"result": function_result},
+                response=response,
             )
         ],
     )
+
+
+def call_function(function_call_part, verbose=False, dry_run=False):
+    function_name = function_call_part.name
+    if verbose:
+        print(f" - Calling function: {function_name}({function_call_part.args})")
+    else:
+        print(f" - Calling function: {function_name}")
+
+    if function_name not in FUNCTION_MAP:
+        return _function_response(
+            function_name, {"error": f"Unknown function: {function_name}"}
+        )
+
+    if dry_run and function_name in SIDE_EFFECT_FUNCTIONS:
+        return _function_response(
+            function_name,
+            {
+                "result": f"[DRY RUN] Skipped '{function_name}' "
+                f"(args={dict(function_call_part.args)}); no files were "
+                f"modified and no code was executed."
+            },
+        )
+
+    args = dict(function_call_part.args)
+    args["working_directory"] = WORKING_DIR
+    function_result = FUNCTION_MAP[function_name](**args)
+    return _function_response(function_name, {"result": function_result})

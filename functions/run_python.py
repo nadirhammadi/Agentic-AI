@@ -2,28 +2,9 @@ import os
 import sys
 import subprocess
 from google.genai import types
-import subprocess
-
-def run_python_file(file_path, args=None, working_directory=None, timeout=30):
-    # Add path validation
-    from utils.path_validation import validate_path
-    file_path = validate_path(file_path, working_directory)
-    
-    # Add timeout
-    try:
-        result = subprocess.run(
-            [sys.executable, file_path] + (args or []),
-            capture_output=True,
-            text=True,
-            cwd=working_directory,
-            timeout=timeout
-        )
-        return result.stdout
-    except subprocess.TimeoutExpired:
-        return "Error: Execution timed out"
 
 
-def run_python_file(working_directory, file_path, args=None):
+def run_python_file(working_directory, file_path, args=None, timeout=30):
     abs_working_dir = os.path.abspath(working_directory)
     abs_file_path = os.path.abspath(os.path.join(working_directory, file_path))
     if not abs_file_path.startswith(abs_working_dir):
@@ -33,14 +14,14 @@ def run_python_file(working_directory, file_path, args=None):
     if not file_path.endswith(".py"):
         return f'Error: "{file_path}" is not a Python file.'
     try:
-        commands = ["python", abs_file_path]
+        commands = [sys.executable, abs_file_path]
         if args:
             commands.extend(args)
         result = subprocess.run(
             commands,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=timeout,
             cwd=abs_working_dir,
         )
         output = []
@@ -53,6 +34,8 @@ def run_python_file(working_directory, file_path, args=None):
             output.append(f"Process exited with code {result.returncode}")
 
         return "\n".join(output) if output else "No output produced."
+    except subprocess.TimeoutExpired:
+        return f'Error: "{file_path}" timed out after {timeout} seconds.'
     except Exception as e:
         return f"Error: executing Python file: {e}"
 
